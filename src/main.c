@@ -14,8 +14,11 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 
+
+char bt_name[] = "test";
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
-#define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
+#define DEVICE_NAME_LEN (sizeof(bt_name) - 1)
+
 
 /*
  * Set Advertisement data. Based on the Eddystone specification:
@@ -29,15 +32,24 @@ static const struct bt_data ad[] = {
 		      0xaa, 0xfe, /* Eddystone UUID */
 		      0x10, /* Eddystone-URL frame type */
 		      0x00, /* Calibrated Tx power at 0m */
-		      0x00, /* URL Scheme Prefix http://www. */
-		      'z', 'e', 'p', 'h', 'y', 'r',
-		      'p', 'r', 'o', 'j', 'e', 'c', 't',
-		      0x08) /* .org */
+		      0x01, /* URL Scheme Prefix https://www. */
+		      't', 'i', 'n', 'y', 'u', 'r', 'l',
+		      0x00, /* .com/ */
+			  '3', 'h', 'm', '4', 'v', 'c', 'k', 'x')
 };
+//https://www.youtube.com/watch?v=y6120QOlsfU -> https://tinyurl.com/3hm4vckx
+
 
 /* Set Scan Response data */
 static const struct bt_data sd[] = {
-	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+	
+	BT_DATA(BT_DATA_NAME_COMPLETE, bt_name, DEVICE_NAME_LEN),
+};
+
+/* Set new Scan Response data */
+static const struct bt_data sd2[] = {
+
+	BT_DATA(BT_DATA_NAME_COMPLETE, "test2", DEVICE_NAME_LEN),
 };
 
 static void bt_ready(int err)
@@ -53,8 +65,15 @@ static void bt_ready(int err)
 
 	printk("Bluetooth initialized\n");
 
+
 	/* Start advertising */
-	err = bt_le_adv_start(BT_LE_ADV_NCONN_IDENTITY, ad, ARRAY_SIZE(ad),
+
+	/* Make a local copy of the BLE advertising parameters */
+	struct bt_le_adv_param adv_params = *(BT_LE_ADV_NCONN_IDENTITY); 
+	adv_params.interval_min = 1000;
+	adv_params.interval_max = 1000;
+	
+	err = bt_le_adv_start(&adv_params, ad, ARRAY_SIZE(ad),
 			      sd, ARRAY_SIZE(sd));
 	if (err) {
 		printk("Advertising failed to start (err %d)\n", err);
@@ -72,6 +91,12 @@ static void bt_ready(int err)
 	bt_addr_le_to_str(&addr, addr_s, sizeof(addr_s));
 
 	printk("Beacon started, advertising as %s\n", addr_s);
+
+	
+	bt_le_adv_update_data(ad, ARRAY_SIZE(ad),
+			      sd2, ARRAY_SIZE(sd2));
+
+	
 }
 
 int main(void)
