@@ -15,7 +15,7 @@
 #include <zephyr/bluetooth/hci.h>
 
 
-char bt_name[] = "gittest";
+char bt_name[] = "test";
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(bt_name) - 1)
 
