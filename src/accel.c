@@ -1,16 +1,15 @@
+/*
+ * Copyright (c) 2019 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+
 #include <stdio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <stdlib.h>
-
-#include <zephyr/types.h>
-#include <stddef.h>
-#include <zephyr/sys/printk.h>
-#include <zephyr/sys/util.h>
-
-#include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/hci.h>
 
 typedef struct {
     int eventNumber;
@@ -63,33 +62,20 @@ static void fetch_and_display(const struct device *sensor)
                 abs(currentEvent.z - previousEvent.z) > threshold) {
                 numEvents++;
                 previousEvent = currentEvent;
-
-                // Start advertising on event detection
-                uint8_t mfg_data[] = {"  Table: 1"};
-                mfg_data[9] = numEvents;
-                printk("Sending advertising data: %02X\n", mfg_data[9]);
-
-                /* Start advertising */
-                int err = bt_le_adv_start(BT_LE_ADV_NCONN, ad, ARRAY_SIZE(ad), NULL, 0);
-                if (err) {
-                    printk("Advertising failed to start (err %d)\n", err);
-                    return;
-                }
-
-                k_msleep(5000);
-
-                err = bt_le_adv_stop();
-                if (err) {
-                    printk("Advertising failed to stop (err %d)\n", err);
-                    return;
-                }
+                printf("Event Number: %d\n", numEvents);
+                printf("Timestamp: %d ms\n", currentEvent.timestamp);
+                printf("x: %f\n", currentEvent.x);
+                printf("y: %f\n", currentEvent.y);
+                printf("z: %f\n", currentEvent.z);
+                printf("\n");
             }
         }
     }
 }
 
 #ifdef CONFIG_LIS2DH_TRIGGER
-static void trigger_handler(const struct device *dev, const struct sensor_trigger *trig)
+static void trigger_handler(const struct device *dev,
+                            const struct sensor_trigger *trig)
 {
     fetch_and_display(dev);
 }
@@ -121,7 +107,9 @@ int main(void)
                 .val1 = 1,
             };
 
-            rc = sensor_attr_set(sensor, trig.chan, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr);
+            rc = sensor_attr_set(sensor, trig.chan,
+                                 SENSOR_ATTR_SAMPLING_FREQUENCY,
+                                 &odr);
             if (rc != 0) {
                 printf("Failed to set odr: %d\n", rc);
                 return 0;
@@ -147,6 +135,4 @@ int main(void)
         k_sleep(K_MSEC(2000));
     }
 #endif /* CONFIG_LIS2DH_TRIGGER */
-
-    return 0;
 }
