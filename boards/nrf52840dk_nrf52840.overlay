@@ -1,16 +1,43 @@
-/*
- * Copyright 2022 Dronetag
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-/{
-    coex_gpio: coex {
-        compatible = "gpio-radio-coex";
-        grant-gpios = <&gpio1 0 (GPIO_PULL_DOWN | GPIO_ACTIVE_LOW)>;
-        grant-delay-us = <150>;
-    };
+// To get started, press Ctrl+Space to bring up the completion menu and view the available nodes.
+
+// You can also use the buttons in the sidebar to perform actions on nodes.
+// Actions currently available include:
+
+// * Enabling / disabling the node
+// * Adding the bus to a bus
+// * Removing the node
+// * Connecting ADC channels
+
+// For more help, browse the DeviceTree documentation at https://docs.zephyrproject.org/latest/guides/dts/index.html
+// You can also visit the nRF DeviceTree extension documentation at https://nrfconnect.github.io/vscode-nrf-connect/devicetree/nrfdevicetree.html
+
+&pinctrl {
+	spi1_default: spi1_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 31)>,
+				<NRF_PSEL(SPIM_MOSI, 0, 30)>,
+				<NRF_PSEL(SPIM_MISO, 1, 8)>;
+		};
+	};
 };
 
-&radio {
-    coex = <&coex_gpio>;
+// Only needed if we are using spi0
+&i2c0 {
+	status = "disabled";
+};
+
+// Adding our device to the devicetree
+// lis2dh is a child node to the spi1 node
+&spi1 {
+	status = "okay";
+	cs-gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;
+	pinctrl-0 = <&spi1_default>;
+	pinctrl-1 = <&spi1_sleep>;
+	pinctrl-names = "default", "sleep";
+	my_spi_device: lis2dh@0 {
+		compatible = "st,lis2dh";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+		label = "lis2dh";
+	};
 };
