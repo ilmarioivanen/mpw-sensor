@@ -16,7 +16,6 @@
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
 static uint8_t mfg_data[] = {"  Table: 1"};
-static int mfg_len = (sizeof(mfg_data) - 1);
 
 static const struct bt_data ad[] = {
 	BT_DATA(BT_DATA_MANUFACTURER_DATA, mfg_data, 10),
