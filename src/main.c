@@ -3,7 +3,7 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <stdlib.h>
-
+#include <math.h>
 #include <zephyr/types.h>
 #include <stddef.h>
 #include <zephyr/sys/printk.h>
@@ -72,16 +72,16 @@ static void fetch_and_display(const struct device *sensor)
             isFirstEvent = false;
         } else {
             // Check if the current event is different from the previous event
-            if (abs(currentEvent.x - previousEvent.x) > threshold ||
-                abs(currentEvent.y - previousEvent.y) > threshold ||
-                abs(currentEvent.z - previousEvent.z) > threshold) {
+            if (fabs(currentEvent.x - previousEvent.x) > threshold ||
+                fabs(currentEvent.y - previousEvent.y) > threshold ||
+                fabs(currentEvent.z - previousEvent.z) > threshold) {
                 numEvents++;
                 previousEvent = currentEvent;
                 printf("Event Number: %d\n", numEvents);
                 printf("Timestamp: %d ms\n", currentEvent.timestamp);
-                printf("x: %d\n", currentEvent.x);
-                printf("y: %d\n", currentEvent.y);
-                printf("z: %d\n", currentEvent.z);
+                printf("x: %f\n", currentEvent.x);
+                printf("y: %f\n", currentEvent.y);
+                printf("z: %f\n", currentEvent.z);
                 printf("\n");
                 
                 printk("Sending advertising data: %02X\n", mfg_data[9]);
