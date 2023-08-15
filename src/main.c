@@ -35,7 +35,7 @@ typedef struct {
 } SensorEvent;
 
 static SensorEvent previousEvent;
-float threshold = 1;
+float threshold = 0;
 int numEvents = 0;
 bool isFirstEvent = true;
 
@@ -66,7 +66,7 @@ static void fetch_and_display(const struct device *sensor)
         currentEvent.x = sensor_value_to_double(&accel[0]);
         currentEvent.y = sensor_value_to_double(&accel[1]);
         currentEvent.z = sensor_value_to_double(&accel[2]);
-
+ 
         if (isFirstEvent) {
             previousEvent = currentEvent;
             isFirstEvent = false;
