@@ -35,7 +35,7 @@ typedef struct {
 } SensorEvent;
 
 static SensorEvent previousEvent;
-float threshold = 0;
+float threshold = 1;
 int numEvents = 0;
 bool isFirstEvent = true;
 
