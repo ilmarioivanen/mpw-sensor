@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "C:\\ncs\\toolchains\\31f4403e35\\opt\\zephyr-sdk\\arm-zephyr-eabi\\bin\\arm-zephyr-eabi-gcc.exe",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "windows-gcc-arm",
+            "configurationProvider": "nordic-semiconductor.nrf-connect"
+        }
+    ],
+    "version": 4
+}

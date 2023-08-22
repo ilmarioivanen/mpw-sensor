@@ -15,7 +15,7 @@
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-static uint8_t mfg_data[] = {"  Table: 1"};
+static uint8_t mfg_data[] = {"  Event: 1"};
 
 static const struct bt_data ad[] = {
 	BT_DATA(BT_DATA_MANUFACTURER_DATA, mfg_data, 10),
@@ -34,13 +34,23 @@ typedef struct {
     float z;
 } SensorEvent;
 
+int mode = 1;
 static SensorEvent previousEvent;
-float threshold = 1;
+float threshold_x = 1;
+float threshold_y = 1;
+float threshold_z = 1;
 int numEvents = 0;
 bool isFirstEvent = true;
 
+
 static void fetch_and_display(const struct device *sensor)
-{
+{   
+    if (mode == 1) {
+        printf("HABANERO \n");
+        threshold_x = 0.5;
+        threshold_y = 0.5;
+        threshold_z = 0.5;
+    }
     struct sensor_value accel[3];
     const char *overrun = "";
     int rc = sensor_sample_fetch(sensor);
@@ -72,9 +82,9 @@ static void fetch_and_display(const struct device *sensor)
             isFirstEvent = false;
         } else {
             // Check if the current event is different from the previous event
-            if (fabs(currentEvent.x - previousEvent.x) > threshold ||
-                fabs(currentEvent.y - previousEvent.y) > threshold ||
-                fabs(currentEvent.z - previousEvent.z) > threshold) {
+            if (fabs(currentEvent.x - previousEvent.x) > threshold_x ||
+                fabs(currentEvent.y - previousEvent.y) > threshold_y ||
+                fabs(currentEvent.z - previousEvent.z) > threshold_z) {
                 numEvents++;
                 previousEvent = currentEvent;
                 printf("Event Number: %d\n", numEvents);
@@ -103,7 +113,6 @@ static void fetch_and_display(const struct device *sensor)
                 else {
                     printk("Stopping advertising data: %02X\n", mfg_data[9]);
                 }
-                mfg_data[9]++;
                 }
             }
         }
@@ -118,7 +127,7 @@ static void trigger_handler(const struct device *dev,
 #endif
 
 int main(void)
-{
+{   
     const struct device *const sensor = DEVICE_DT_GET_ANY(st_lis2dh);
 
     if (sensor == NULL) {
