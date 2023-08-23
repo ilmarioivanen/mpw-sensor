@@ -44,3 +44,17 @@
 		label = "lis2dh";
 	};
 };
+
+// for power pin
+/ {
+	leds {
+		/* pljfalkfjsa */
+		led4: led_4 {
+			gpios = < &gpio1 4 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	aliases {
+		pwr = &led4;
+	};
+};

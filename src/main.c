@@ -8,18 +8,43 @@
 #include <stddef.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
-
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
+#include <inttypes.h>
 
+
+/* Set up leds */
+/* 1000 msec = 1 sec */
+#define LED_SLEEP_MS 1000
+#define LED0_NODE DT_ALIAS(led0)
+#define LED1_NODE DT_ALIAS(led1)
+#define LED2_NODE DT_ALIAS(led2)
+static const struct gpio_dt_spec led_red = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+static const struct gpio_dt_spec led_blue = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
+static const struct gpio_dt_spec led_green = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
+struct gpio_dt_spec leds[3] = {led_red, led_blue, led_green};
+int led_index = 0;
+int last_led_index = 0;
+
+/* Set up button */
+#define BUTTON_SLEEP_MS	1
+#define SW0_NODE	DT_ALIAS(sw0)
+#if !DT_NODE_HAS_STATUS(SW0_NODE, okay)
+#error "Unsupported board: sw0 devicetree alias is not defined"
+#endif
+static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios, {0});
+static struct gpio_callback button_cb_data;
+
+/* Set up Bluetooth */
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME /* Device name is located in prj.conf */
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-static uint8_t mfg_data[] = {"  Event: 1"}; /* The number is an indication of mode*/
+static uint8_t mfg_data[] = {"  Chair "}; /* The number is an indication of mode*/
 
 /* Set Ad data */
 static const struct bt_data ad[] = {
-	BT_DATA(BT_DATA_MANUFACTURER_DATA, mfg_data, 10),
+	BT_DATA(BT_DATA_MANUFACTURER_DATA, mfg_data, 8),
 };
 
 /* Set Scan Response data */
@@ -36,38 +61,42 @@ typedef struct {
 } SensorEvent;
 
 int mode = 1;
+int last_mode = 0;
 static SensorEvent previousEvent;
 float threshold_x = 1;
 float threshold_y = 1;
 float threshold_z = 1;
 int numEvents = 0;
 bool isFirstEvent = true;
-int last_mode = 1;
 
 static void fetch_and_display(const struct device *sensor)
 {   
     /* Check if mode has changed */
     if (last_mode != mode) { 
-        mfg_data[9]++;
+
         last_mode = mode;
-    }
-    if (mode == 1) {
-        /* Chair mode */
-        threshold_x = 0.5;
-        threshold_y = 0.5;
-        threshold_z = 0.5;
-    }
-    else if (mode == 2) {
-        /* Door mode */
-        threshold_x = 0.5;
-        threshold_y = 0.5;
-        threshold_z = 0.5;
-    }
-    else if (mode == 3) {
-        /* Other mode */
-        threshold_x = 0.5;
-        threshold_y = 0.5;
-        threshold_z = 0.5;
+
+        if (mode == 1) {
+            /* Chair mode */
+            strcpy(mfg_data, "  Chair ");
+            threshold_x = 0.5;
+            threshold_y = 0.5;
+            threshold_z = 0.5;
+        }
+        else if (mode == 2) {
+            /* Door mode */
+            strcpy(mfg_data, "  Door  ");
+            threshold_x = 0.5;
+            threshold_y = 0.5;
+            threshold_z = 0.5;
+        }
+        else if (mode == 3) {
+            /* Other mode */
+             strcpy(mfg_data, "  Coffee");
+            threshold_x = 0.5;
+            threshold_y = 0.5;
+            threshold_z = 0.5;
+        }
     }
 
     struct sensor_value accel[3];
@@ -113,7 +142,7 @@ static void fetch_and_display(const struct device *sensor)
                 printf("z: %f\n", currentEvent.z);
                 printf("\n");
                 
-                printk("Sending advertising data: %02X\n", mfg_data[9]);
+                printk("Sending advertising data: %s\n", mfg_data);
                 
                 int err;
                 err = bt_le_adv_start(BT_LE_ADV_NCONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
@@ -122,7 +151,7 @@ static void fetch_and_display(const struct device *sensor)
                     return 0;
                     }
 
-                k_msleep(5000);
+                k_msleep(3000);
 
                 err = bt_le_adv_stop();
                 if (err) {
@@ -130,17 +159,103 @@ static void fetch_and_display(const struct device *sensor)
                     return 0;
                     }
                 else {
-                    printk("Stopping advertising data: %02X\n", mfg_data[9]);
+                    printk("Stopping advertising data: %s\n", mfg_data);
                 }
                 }
             }
         }
 }
 
+/* Leds init */
+int led_init(void)
+{
+    for (int i = 0; i < 3; i++) {
 
+        int ret;
+        const struct gpio_dt_spec led = leds[i];
+         
+        if (!gpio_is_ready_dt(&led)) {
+            return 0;
+        }
+
+        ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
+        if (ret < 0) {
+            return 0;
+        }
+        gpio_pin_set_dt(&led, 0);
+        gpio_pin_set_dt(&led_red, 1);
+
+    }
+    return 0;
+}
+
+/* Function for when button is pressed */
+void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{ 
+    last_led_index = led_index;
+    last_mode = mode;
+
+    mode++;
+    led_index++;
+
+    if (led_index >= 3) {
+        led_index = 0;
+        mode = 1;
+    }
+
+    const struct gpio_dt_spec led = leds[led_index];
+    const struct gpio_dt_spec last_led = leds[last_led_index];
+
+    gpio_pin_set_dt(&last_led, 0);
+	gpio_pin_set_dt(&led, 1);
+
+    k_msleep(BUTTON_SLEEP_MS); 
+}
+
+/* Button init */
+int button_init(void) 
+{
+
+    int ret;
+
+	if (!gpio_is_ready_dt(&button)) {
+		printk("Error: button device %s is not ready\n",
+		       button.port->name);
+		return 0;
+	}
+
+	ret = gpio_pin_configure_dt(&button, GPIO_INPUT);
+	if (ret != 0) {
+		printk("Error %d: failed to configure %s pin %d\n",
+		       ret, button.port->name, button.pin);
+		return 0;
+	}
+
+	ret = gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_TO_ACTIVE);
+
+	if (ret != 0) {
+		printk("Error %d: failed to configure interrupt on %s pin %d\n",
+			ret, button.port->name, button.pin);
+		return 0;
+	}
+
+	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
+	gpio_add_callback(button.port, &button_cb_data);
+	printk("Set up button at %s pin %d\n", button.port->name, button.pin);
+
+	return 0;
+}
+
+
+/* Main */
 
 int main(void)
 {   
+
+    led_init();
+
+    button_init();
+
     const struct device *const sensor = DEVICE_DT_GET_ANY(st_lis2dh);
 
     if (sensor == NULL) {
