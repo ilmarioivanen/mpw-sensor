@@ -112,6 +112,7 @@
     accelerometer: lis2dh@0 {
         compatible = "st,lis2dh";
         reg = <0>;
+		irq-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>, <&gpio0 17 GPIO_ACTIVE_HIGH>;
         spi-max-frequency = <10000000>;
         label = "lis2dh";
 	};

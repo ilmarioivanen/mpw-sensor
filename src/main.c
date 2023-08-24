@@ -30,9 +30,6 @@ int last_led_index = 0;
 /* Set up button */
 #define BUTTON_SLEEP_MS	1
 #define SW0_NODE	DT_ALIAS(sw0)
-#if !DT_NODE_HAS_STATUS(SW0_NODE, okay)
-#error "Unsupported board: sw0 devicetree alias is not defined"
-#endif
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios, {0});
 static struct gpio_callback button_cb_data;
 
@@ -271,7 +268,7 @@ int button_init(void)
 	return 0;
 }
 
-int magnet_close(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+void magnet_close(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
     int val = gpio_pin_get_raw(mag_switch.port, mag_switch.pin);
 
