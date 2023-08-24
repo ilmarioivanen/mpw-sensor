@@ -45,14 +45,14 @@ static struct gpio_callback switch_cb_data;
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME /* Device name is located in prj.conf */
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-static uint8_t mfg_data[] = {"  Chair "}; /* The number is an indication of mode*/
+static uint8_t mfg_data[] = {"  Chair "};
 
-/* Set Ad data */
+/* Set ad data */
 static const struct bt_data ad[] = {
 	BT_DATA(BT_DATA_MANUFACTURER_DATA, mfg_data, 8),
 };
 
-/* Set Scan Response data */
+/* Set scan response data */
 static const struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
 };
@@ -74,7 +74,11 @@ float threshold_y = 1;
 float threshold_z = 1;
 int numEvents = 0;
 bool isFirstEvent = true;
+int check = 1;
+int coffee_check = 0;
+int twice = 0;
 
+/* Function for gathering and processing sensor data */
 static void fetch_and_display(const struct device *sensor)
 {   
     /* Check if mode has changed */
@@ -97,11 +101,11 @@ static void fetch_and_display(const struct device *sensor)
             threshold_z = 5000;
         }
         else if (mode == 3) {
-            /* Other mode */
+            /* Coffee mode */
              strcpy(mfg_data, "  Coffee");
-            threshold_x = 0.5;
-            threshold_y = 0.5;
-            threshold_z = 0.5;
+            threshold_x = 10;
+            threshold_y = 10;
+            threshold_z = 0.2;
         }
     }
 
@@ -109,13 +113,6 @@ static void fetch_and_display(const struct device *sensor)
     const char *overrun = "";
     int rc = sensor_sample_fetch(sensor);
 
-    if (rc == -EBADMSG) {
-        /* Sample overrun.  Ignore in polled mode. */
-        if (IS_ENABLED(CONFIG_LIS2DH_TRIGGER)) {
-            overrun = "[OVERRUN] ";
-        }
-        rc = 0;
-    }
     if (rc == 0) {
         rc = sensor_channel_get(sensor,
                                 SENSOR_CHAN_ACCEL_XYZ,
@@ -150,8 +147,20 @@ static void fetch_and_display(const struct device *sensor)
                 printf("z: %f\n", currentEvent.z);
                 printf("\n");
                 
+                if (mode == 3 && coffee_check < 11) {
+                    coffee_check++;
+                }
+                else if (twice < 1) {
+                    twice++;
+                }
+                else {
+                
+                twice = 0;
+                coffee_check = 0;
+
                 printk("Sending advertising data: %s\n", mfg_data);
                 
+                /* Send advertisement */
                 int err;
                 err = bt_le_adv_start(BT_LE_ADV_NCONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
                 if (err) {
@@ -161,6 +170,7 @@ static void fetch_and_display(const struct device *sensor)
 
                 k_msleep(3000);
 
+                /* Stop advertisement*/
                 err = bt_le_adv_stop();
                 if (err) {
                     printk("Advertising failed to stop (err %d)\n", err);
@@ -168,6 +178,13 @@ static void fetch_and_display(const struct device *sensor)
                     }
                 else {
                     printk("Stopping advertising data: %s\n", mfg_data);
+                }
+                /*
+                if (check % 2 == 0 && mode == 3) {
+                    k_msleep(10000);
+                }
+                check++;
+                */
                 }
                 }
             }
@@ -316,7 +333,7 @@ int main(void)
         return 0;
     }
 
-    // Initialize Bluetooth
+    /* Initialize Bluetooth */
     int err;
     printk("Starting Broadcaster\n");
     err = bt_enable(NULL);
