@@ -36,6 +36,11 @@ int last_led_index = 0;
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios, {0});
 static struct gpio_callback button_cb_data;
 
+/* Set up mag switch */
+#define SW1_NODE	DT_ALIAS(sw1)
+static const struct gpio_dt_spec mag_switch = GPIO_DT_SPEC_GET(SW1_NODE, gpios);
+static struct gpio_callback switch_cb_data;
+
 /* Set up Bluetooth */
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME /* Device name is located in prj.conf */
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
@@ -62,6 +67,7 @@ typedef struct {
 
 int mode = 1;
 int last_mode = 0;
+bool door_open = true;
 static SensorEvent previousEvent;
 float threshold_x = 1;
 float threshold_y = 1;
@@ -86,9 +92,9 @@ static void fetch_and_display(const struct device *sensor)
         else if (mode == 2) {
             /* Door mode */
             strcpy(mfg_data, "  Door  ");
-            threshold_x = 0.5;
-            threshold_y = 0.5;
-            threshold_z = 0.5;
+            threshold_x = 5000;
+            threshold_y = 5000;
+            threshold_z = 5000;
         }
         else if (mode == 3) {
             /* Other mode */
@@ -129,8 +135,10 @@ static void fetch_and_display(const struct device *sensor)
             previousEvent = currentEvent;
             isFirstEvent = false;
         } else {
-            // Check if the current event is different from the previous event            
-            if (fabs(currentEvent.x - previousEvent.x) > threshold_x ||
+            // Check if the current event is different from the previous event
+            
+            if ((mode == 2 && door_open)                             ||
+                fabs(currentEvent.x - previousEvent.x) > threshold_x ||
                 fabs(currentEvent.y - previousEvent.y) > threshold_y ||
                 fabs(currentEvent.z - previousEvent.z) > threshold_z) {
                 numEvents++;
@@ -246,6 +254,45 @@ int button_init(void)
 	return 0;
 }
 
+int magnet_close(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    int val = gpio_pin_get_raw(mag_switch.port, mag_switch.pin);
+
+    if (val == 0) {
+        door_open = false;
+    } 
+    else if (val == 1) {
+        door_open = true;
+    }
+
+}
+
+int magnet_init(void)
+{
+    int ret;
+
+    if (!gpio_is_ready_dt(&mag_switch)) {
+        return 0;
+    }
+
+    // Configure the GPIO pin as an input
+    ret = gpio_pin_configure_dt(&mag_switch, GPIO_INPUT);
+    if (ret != 0) {
+        return 0;
+    }
+
+    ret = gpio_pin_interrupt_configure_dt(&mag_switch, GPIO_INT_EDGE_BOTH);
+
+	if (ret != 0) {
+		printk("Error %d: failed to configure interrupt on %s pin %d\n",
+			ret, mag_switch.port->name, mag_switch.pin);
+		return 0;
+    }
+
+    gpio_init_callback(&switch_cb_data, magnet_close, BIT(mag_switch.pin));
+	gpio_add_callback(mag_switch.port, &switch_cb_data);
+}
+
 
 /* Main */
 
@@ -255,6 +302,8 @@ int main(void)
     led_init();
 
     button_init();
+
+    magnet_init();
 
     const struct device *const sensor = DEVICE_DT_GET_ANY(st_lis2dh);
 

@@ -54,7 +54,15 @@
 		};
 	};
 
+	buttons {
+		button4: button_4 {
+			gpios = <&gpio0 2 GPIO_PULL_UP>;
+			label = "magnet switch";
+		};
+	};
+
 	aliases {
 		pwr = &led4;
+		sw1 = &button4;
 	};
 };
