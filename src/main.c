@@ -105,7 +105,7 @@ static void fetch_and_display(const struct device *sensor)
             threshold_z = 0.2;
         }
     }
-
+    /* Set up sensor*/
     struct sensor_value accel[3];
     const char *overrun = "";
     int rc = sensor_sample_fetch(sensor);
@@ -129,7 +129,7 @@ static void fetch_and_display(const struct device *sensor)
             previousEvent = currentEvent;
             isFirstEvent = false;
         } else {
-            // Check if the current event is different from the previous event
+            /* Check if the current event is different from the previous event */
             
             if ((mode == 2 && door_open)                             ||
                 fabs(currentEvent.x - previousEvent.x) > threshold_x ||
@@ -143,10 +143,12 @@ static void fetch_and_display(const struct device *sensor)
                 printf("y: %f\n", currentEvent.y);
                 printf("z: %f\n", currentEvent.z);
                 printf("\n");
-                
+
+                /* Specifications for coffee mode */
                 if (mode == 3 && coffee_check < 11) {
                     coffee_check++;
                 }
+                /* Prevents two ads happening from one movement */
                 else if (twice < 1) {
                     twice++;
                 }
@@ -177,7 +179,7 @@ static void fetch_and_display(const struct device *sensor)
                     printk("Stopping advertising data: %s\n", mfg_data);
                 }
                 /*
-                if (check % 2 == 0 && mode == 3) {
+                if (check % 2 == 0) {
                     k_msleep(10000);
                 }
                 check++;
@@ -268,6 +270,7 @@ int button_init(void)
 	return 0;
 }
 
+/* Magnet detection */
 void magnet_close(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
     int val = gpio_pin_get_raw(mag_switch.port, mag_switch.pin);
@@ -280,7 +283,7 @@ void magnet_close(const struct device *dev, struct gpio_callback *cb, uint32_t p
     }
 
 }
-
+/* Magnet inti */
 int magnet_init(void)
 {
     int ret;
@@ -289,7 +292,7 @@ int magnet_init(void)
         return 0;
     }
 
-    // Configure the GPIO pin as an input
+    /* Configure the GPIO pin as an input */
     ret = gpio_pin_configure_dt(&mag_switch, GPIO_INPUT);
     if (ret != 0) {
         return 0;
