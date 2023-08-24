@@ -69,7 +69,8 @@ float threshold_z = 1;
 int numEvents = 0;
 bool isFirstEvent = true;
 int check = 1;
-
+int coffee_check = 0;
+int twice = 0;
 
 /* Function for gathering and processing sensor data */
 static void fetch_and_display(const struct device *sensor)
@@ -138,6 +139,17 @@ static void fetch_and_display(const struct device *sensor)
                 printf("z: %f\n", currentEvent.z);
                 printf("\n");
                 
+                if (mode == 3 && coffee_check < 11) {
+                    coffee_check++;
+                }
+                else if (twice < 1) {
+                    twice++;
+                }
+                else {
+                
+                twice = 0;
+                coffee_check = 0;
+
                 printk("Sending advertising data: %s\n", mfg_data);
                 
                 /* Send advertisement */
@@ -159,10 +171,13 @@ static void fetch_and_display(const struct device *sensor)
                 else {
                     printk("Stopping advertising data: %s\n", mfg_data);
                 }
+                /*
                 if (check % 2 == 0 && mode == 3) {
                     k_msleep(10000);
                 }
                 check++;
+                */
+                }
                 }
             }
         }
