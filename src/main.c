@@ -234,7 +234,7 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t
     gpio_pin_set_dt(&last_led, 0);
 	gpio_pin_set_dt(&led, 1);
 
-    k_msleep(BUTTON_SLEEP_MS); 
+    k_msleep(BUTTON_SLEEP_MS);
 }
 
 /* Button init */
