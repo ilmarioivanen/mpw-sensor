@@ -27,6 +27,10 @@ struct gpio_dt_spec leds[3] = {led_red, led_blue, led_green};
 int led_index = 0;
 int last_led_index = 0;
 
+#define LED_TIMEOUT K_SECONDS(3)  // Timeout of 3 seconds
+static struct k_timer led_timer;
+
+
 /* Set up button */
 #define BUTTON_SLEEP_MS	1
 #define SW0_NODE	DT_ALIAS(sw0)
@@ -208,14 +212,29 @@ int led_init(void)
         }
         gpio_pin_set_dt(&led, 0);
         gpio_pin_set_dt(&led_red, 1);
+        k_timer_start(&led_timer, LED_TIMEOUT, K_NO_WAIT);
 
     }
+
     return 0;
+}
+
+/* Leds off on a timer */
+void turn_off_led(struct k_timer *timer_id) {
+
+    for (int i = 0; i < 3; i++) {
+
+        const struct gpio_dt_spec led = leds[i];
+
+        gpio_pin_set_dt(&led, 0);
+    }
 }
 
 /* Function for when button is pressed */
 void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 { 
+    k_timer_stop(&led_timer);
+
     last_led_index = led_index;
     last_mode = mode;
 
@@ -233,6 +252,7 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t
     gpio_pin_set_dt(&last_led, 0);
 	gpio_pin_set_dt(&led, 1);
 
+    k_timer_start(&led_timer, LED_TIMEOUT, K_NO_WAIT);
     k_msleep(BUTTON_SLEEP_MS);
 }
 
@@ -281,9 +301,9 @@ void magnet_close(const struct device *dev, struct gpio_callback *cb, uint32_t p
     else if (val == 1) {
         door_open = true;
     }
-
 }
-/* Magnet inti */
+
+/* Magnet init */
 int magnet_init(void)
 {
     int ret;
@@ -317,6 +337,8 @@ int main(void)
 {   
 
     led_init();
+
+    k_timer_init(&led_timer, turn_off_led, NULL);
 
     button_init();
 
